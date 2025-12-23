@@ -1,0 +1,8 @@
+variables:
+  - name: additionalIptablesRulesV4
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        description: "Extra iptables-restore rules.v4 content"
+        default: ""
