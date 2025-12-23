@@ -1,0 +1,84 @@
+patches:
+- name: inject-iptables-rules
+  definitions:
+  - selector:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlaneTemplate
+      matchResources:
+        controlPlane: true
+    jsonPatches:
+    - op: replace
+      path: /spec/template/spec/kubeadmConfigSpec/files
+      valueFrom:
+        template: |
+          - path: /etc/iptables/rules.v4
+            owner: root:root
+            permissions: "0600"
+            content: |
+              {{ .additionalIptablesRulesV4 | indent 14 }}
+          - path: /etc/systemd/system/iptables-restore.service
+            owner: root:root
+            permissions: "0644"
+            content: |
+              [Unit]
+              Description=Restore iptables rules
+              DefaultDependencies=no
+              Before=network-pre.target
+              Wants=network-pre.target
+
+              [Service]
+              Type=oneshot
+              ExecStart=/sbin/iptables-restore /etc/iptables/rules.v4
+              RemainAfterExit=yes
+
+              [Install]
+              WantedBy=multi-user.target
+    - op: replace
+      path: /spec/template/spec/kubeadmConfigSpec/preKubeadmCommands
+      value:
+        - "mkdir -p /etc/iptables"
+        - "iptables-restore /etc/iptables/rules.v4 || true"
+        - "systemctl daemon-reload"
+        - "systemctl enable --now iptables-restore.service || true"
+
+  - selector:
+      apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+      kind: KubeadmConfigTemplate
+      matchResources:
+        machineDeploymentClass:
+          names:
+          - default-worker # <-- change to your MD class name(s)
+    jsonPatches:
+    - op: replace
+      path: /spec/template/spec/files
+      valueFrom:
+        template: |
+          - path: /etc/iptables/rules.v4
+            owner: root:root
+            permissions: "0600"
+            content: |
+              {{ .additionalIptablesRulesV4 | indent 14 }}
+          - path: /etc/systemd/system/iptables-restore.service
+            owner: root:root
+            permissions: "0644"
+            content: |
+              [Unit]
+              Description=Restore iptables rules
+              DefaultDependencies=no
+              Before=network-pre.target
+              Wants=network-pre.target
+
+              [Service]
+              Type=oneshot
+              ExecStart=/sbin/iptables-restore /etc/iptables/rules.v4
+              RemainAfterExit=yes
+
+              [Install]
+              WantedBy=multi-user.target
+    - op: replace
+      path: /spec/template/spec/preKubeadmCommands
+      value:
+        - "mkdir -p /etc/iptables"
+        - "iptables-restore /etc/iptables/rules.v4 || true"
+        - "systemctl daemon-reload"
+        - "systemctl enable --now iptables-restore.service || true"
