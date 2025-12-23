@@ -1,0 +1,18 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: my-tanzu-cluster
+  namespace: my-namespace
+spec:
+  topology:
+    class: my-custom-clusterclass
+    version: v1.29.4+vmware.1 # example
+    variables:
+      - name: additionalIptablesRulesV4
+        value: |
+          *filter
+          :INPUT ACCEPT [0:0]
+          :FORWARD ACCEPT [0:0]
+          :OUTPUT ACCEPT [0:0]
+          -A INPUT -p tcp --dport 9100 -j ACCEPT
+          COMMIT
